@@ -1,0 +1,30 @@
+#!/bin/bash
+
+#SBATCH --nodes=1
+#SBATCH --ntasks=45
+#SBATCH --time=48:00:00
+#SBATCH --mem-per-cpu=2gb
+#SBATCH --mail-type=NONE
+#SBATCH --account=open
+
+
+# Get started
+
+echo "Job started on $(hostname) at $(date)"
+
+# Go to the correct place
+cd $SLURM_SUBMIT_DIR
+
+# Load R module
+module load r/4.2.1
+# module load anaconda/2021.05
+
+# Run the job itself
+
+Rscript FormalSimulation_para.R
+
+# Finish up
+
+echo "Job Ended at $(date)"
+
+

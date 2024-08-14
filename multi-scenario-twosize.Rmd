@@ -1,0 +1,354 @@
+---
+title: "multi-scenario-twosize"
+output: html_document
+date: "2024-02-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+true_ate = 10
+location1 = '/storage/work/yqs5519/TuneCalibratedLoss/sim_results1' # no+no
+location2 = '/storage/work/yqs5519/TuneCalibratedLoss/sim_results2' # no+yes
+# location3 = '/storage/work/yqs5519/TuneCalibratedLoss/sim_results3' # yes+no
+# location4 = '/storage/work/yqs5519/TuneCalibratedLoss/sim_results4' # yes+yes
+location3 = '/storage/work/yqs5519/TuneCalibratedLoss/sim_results9' # yes+no
+location4 = '/storage/work/yqs5519/TuneCalibratedLoss/sim_results10' # yes+yes
+
+## ps incorrect. outcome incorrect + correct
+ate_HT = read.csv(paste(location1, 'ate_HT.csv', sep = '/'))[,-1] %>% na.omit
+ate_Hajek = read.csv(paste(location1, 'ate_Hajek.csv', sep = '/'))[,-1] %>% na.omit
+ate_DR = read.csv(paste(location1, 'ate_DR.csv', sep = '/'))[,-1] %>% na.omit
+ate_DR2 = read.csv(paste(location2, 'ate_DR.csv', sep = '/'))[,-1] %>% na.omit
+
+## ps correct. outcome incorrect + correct
+ate_HT_correct = read.csv(paste(location3, 'ate_HT.csv', sep = '/'))[,-1] %>% na.omit
+ate_Hajek_correct = read.csv(paste(location3, 'ate_Hajek.csv', sep = '/'))[,-1] %>% na.omit
+ate_DR_correct = read.csv(paste(location3, 'ate_DR.csv', sep = '/'))[,-1] %>% na.omit
+ate_DR_correctboth = read.csv(paste(location4, 'ate_DR.csv', sep = '/'))[,-1] %>% na.omit
+
+colnames(ate_HT) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+colnames(ate_Hajek) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+colnames(ate_DR) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+colnames(ate_DR2) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+
+colnames(ate_HT_correct) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+colnames(ate_Hajek_correct) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+colnames(ate_DR_correct) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+colnames(ate_DR_correctboth) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+
+ate_all = rbind(ate_HT, ate_Hajek, ate_DR, ate_DR2,
+                ate_HT_correct, ate_Hajek_correct, ate_DR_correct, ate_DR_correctboth) %>% 
+  mutate(Estimator = c(rep('HT - PS incorrect', nrow(ate_HT)), 
+                       rep('Hajek - PS incorrect', nrow(ate_Hajek)), 
+                       rep('DR - both incorrect', nrow(ate_DR)), 
+                       rep('DR - PS incorrect, outcome correct', nrow(ate_DR2)),
+                       rep('HT - PS correct', nrow(ate_HT_correct)),
+                       rep('Hajek - PS correct', nrow(ate_Hajek_correct)),
+                       rep('DR - PS correct, outcome incorrect', nrow(ate_DR_correct)),
+                       rep('DR - both correct', nrow(ate_DR_correctboth))
+                       )) %>% 
+  mutate(`PS correct` = c(rep('No', nrow(ate_HT)), 
+                       rep('No', nrow(ate_Hajek)), 
+                       rep('No', nrow(ate_DR)), 
+                       rep('No', nrow(ate_DR2)),
+                       rep('Yes', nrow(ate_HT_correct)),
+                       rep('Yes', nrow(ate_Hajek_correct)),
+                       rep('Yes', nrow(ate_DR_correct)),
+                       rep('Yes', nrow(ate_DR_correctboth))))
+ate_plot = ate_all %>% pivot_longer(
+  1:6,
+  names_to = 'Methods',
+  values_to = 'Estimation'
+) %>% mutate(Methods = factor(Methods, levels = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS'))) %>% 
+  mutate(Estimator = case_when(
+    Estimator == 'DR - PS correct, outcome incorrect' ~ 'DR - PS correct,\noutcome incorrect',
+    Estimator == 'DR - PS incorrect, outcome correct' ~ 'DR - PS incorrect,\noutcome correct',
+    TRUE ~ Estimator)) %>% 
+  # mutate(Estimator = factor(Estimator, levels = c('DR - both incorrect', 'DR - PS incorrect,\noutcome correct', 'DR - PS correct,\noutcome incorrect', 'DR - both correct',
+  #                                                 'Hajek - PS incorrect', 'Hajek - PS correct', 'HT - PS incorrect', 'HT - PS correct')))
+    mutate(Estimator = factor(Estimator, levels = c('DR - both incorrect', 'DR - PS incorrect,\noutcome correct', 'Hajek - PS incorrect', 'HT - PS incorrect',
+                                                    'DR - PS correct,\noutcome incorrect', 'DR - both correct', 'Hajek - PS correct', 'HT - PS correct')))
+
+ate_plot2 = 
+ate_plot %>% filter(! ((Estimator == 'DR - PS correct,\noutcome incorrect' & Methods == 'Naive') |
+                       (Estimator == 'DR - both correct' & Methods == 'Naive') |
+                       (Estimator == 'Hajek - PS correct' & Methods == 'Naive')|
+                       (Estimator == 'HT - PS correct' & Methods == 'Naive'))) %>% 
+  mutate(n = 'n = 200')
+```
+
+```{r}
+location1 = '/storage/work/yqs5519/TuneCalibratedLoss/sim_results5'
+location2 = '/storage/work/yqs5519/TuneCalibratedLoss/sim_results6'
+# location3 = '/storage/work/yqs5519/TuneCalibratedLoss/sim_results7'
+# location4 = '/storage/work/yqs5519/TuneCalibratedLoss/sim_results8'
+location3 = '/storage/work/yqs5519/TuneCalibratedLoss/sim_results11'
+location4 = '/storage/work/yqs5519/TuneCalibratedLoss/sim_results12'
+
+
+## ps incorrect. outcome incorrect + correct
+ate_HT = read.csv(paste(location1, 'ate_HT.csv', sep = '/'))[,-1] %>% na.omit
+ate_Hajek = read.csv(paste(location1, 'ate_Hajek.csv', sep = '/'))[,-1] %>% na.omit
+ate_DR = read.csv(paste(location1, 'ate_DR.csv', sep = '/'))[,-1] %>% na.omit
+ate_DR2 = read.csv(paste(location2, 'ate_DR.csv', sep = '/'))[,-1] %>% na.omit
+
+## ps correct. outcome incorrect + correct
+ate_HT_correct = read.csv(paste(location3, 'ate_HT.csv', sep = '/'))[,-1] %>% na.omit
+ate_Hajek_correct = read.csv(paste(location3, 'ate_Hajek.csv', sep = '/'))[,-1] %>% na.omit
+ate_DR_correct = read.csv(paste(location3, 'ate_DR.csv', sep = '/'))[,-1] %>% na.omit
+ate_DR_correctboth = read.csv(paste(location4, 'ate_DR.csv', sep = '/'))[,-1] %>% na.omit
+
+colnames(ate_HT) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+colnames(ate_Hajek) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+colnames(ate_DR) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+colnames(ate_DR2) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+
+colnames(ate_HT_correct) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+colnames(ate_Hajek_correct) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+colnames(ate_DR_correct) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+colnames(ate_DR_correctboth) = c('Naive', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS', 'CBPS')
+
+ate_all = rbind(ate_HT, ate_Hajek, ate_DR, ate_DR2,
+                ate_HT_correct, ate_Hajek_correct, ate_DR_correct, ate_DR_correctboth) %>% 
+  mutate(Estimator = c(rep('HT - PS incorrect', nrow(ate_HT)), 
+                       rep('Hajek - PS incorrect', nrow(ate_Hajek)), 
+                       rep('DR - both incorrect', nrow(ate_DR)), 
+                       rep('DR - PS incorrect, outcome correct', nrow(ate_DR2)),
+                       rep('HT - PS correct', nrow(ate_HT_correct)),
+                       rep('Hajek - PS correct', nrow(ate_Hajek_correct)),
+                       rep('DR - PS correct, outcome incorrect', nrow(ate_DR_correct)),
+                       rep('DR - both correct', nrow(ate_DR_correctboth))
+                       )) %>% 
+  mutate(`PS correct` = c(rep('No', nrow(ate_HT)), 
+                       rep('No', nrow(ate_Hajek)), 
+                       rep('No', nrow(ate_DR)), 
+                       rep('No', nrow(ate_DR2)),
+                       rep('Yes', nrow(ate_HT_correct)),
+                       rep('Yes', nrow(ate_Hajek_correct)),
+                       rep('Yes', nrow(ate_DR_correct)),
+                       rep('Yes', nrow(ate_DR_correctboth))))
+ate_plot = ate_all %>% pivot_longer(
+  1:6,
+  names_to = 'Methods',
+  values_to = 'Estimation'
+) %>% mutate(Methods = factor(Methods, levels = c('Naive', 'CBPS', 'GLM', 'GLM+IS', 'NNet', 'NNet+IS'))) %>% 
+  mutate(Estimator = case_when(
+    Estimator == 'DR - PS correct, outcome incorrect' ~ 'DR - PS correct,\noutcome incorrect',
+    Estimator == 'DR - PS incorrect, outcome correct' ~ 'DR - PS incorrect,\noutcome correct',
+    TRUE ~ Estimator)) %>% 
+  # mutate(Estimator = factor(Estimator, levels = c('DR - both incorrect', 'DR - PS incorrect,\noutcome correct', 'DR - PS correct,\noutcome incorrect', 'DR - both correct',
+  #                                                 'Hajek - PS incorrect', 'Hajek - PS correct', 'HT - PS incorrect', 'HT - PS correct')))
+    mutate(Estimator = factor(Estimator, levels = c('DR - both incorrect', 'DR - PS incorrect,\noutcome correct', 'Hajek - PS incorrect', 'HT - PS incorrect',
+                                                    'DR - PS correct,\noutcome incorrect', 'DR - both correct', 'Hajek - PS correct', 'HT - PS correct')))
+
+ate_plot3 = 
+ate_plot %>% filter(! ((Estimator == 'DR - PS correct,\noutcome incorrect' & Methods == 'Naive') |
+                       (Estimator == 'DR - both correct' & Methods == 'Naive') |
+                       (Estimator == 'Hajek - PS correct' & Methods == 'Naive')|
+                       (Estimator == 'HT - PS correct' & Methods == 'Naive'))) %>% 
+  mutate(n = 'n = 500')
+```
+
+```{r}
+ate_plot_all = rbind(ate_plot2, ate_plot3)
+```
+
+```{r, fig.width=20, fig.height=7}
+custom_colors <- c("#F7F7F7", "#FFC0CB", "#FDDBC7", "#D6604D", "#D1E5F0",  "#4393C3")
+
+
+
+# Create a grouping variable combining 'PS correct' and 'Methods'
+ate_plot_all$group <- paste(ate_plot_all$`PS correct`, ate_plot_all$Methods, sep = "_")
+ate_plot_all$group = factor(ate_plot_all$group, levels = c("No_Naive", "No_CBPS", "No_GLM", "No_GLM+IS", "No_NNet", "No_NNet+IS",
+                                                     "Yes_Naive", "Yes_CBPS", "Yes_GLM", "Yes_GLM+IS", "Yes_NNet", "Yes_NNet+IS"))
+# Specify custom colors for each unique combination of 'PS correct' and 'Methods'
+custom_colors <- c("No_Naive" = "#F7F7F7", "No_CBPS" = "#FFC0CB", "No_GLM" = "#FDDBC7", "No_GLM+IS" = "#D6604D", "No_NNet" = "#D1E5F0", "No_NNet+IS" = "#4393C3",
+                   "Yes_Naive" = "#F7F7F7", "Yes_CBPS" = "#FFC0CB", "Yes_GLM" = "#FDDBC7", "Yes_GLM+IS" = "#D6604D", "Yes_NNet" = "#D1E5F0", "Yes_NNet+IS" = "#4393C3")
+
+# Plotting
+out = 
+ggarrange(plotlist = lapply(split(ate_plot_all, ate_plot_all$`PS correct`), function(x) {
+  ggplot(data = x) +
+    geom_boxplot(aes(x = Estimator, y = Estimation, fill = group)) +
+    geom_hline(yintercept = true_ate, color = 'red') +
+    theme_bw() +
+    ylim(-100, 100) +
+    scale_fill_manual(values = custom_colors,
+                      labels = c(
+                                'No_Naive' = 'Naive',
+                                'No_CBPS' = 'CBPS',
+                                'No_GLM' = 'GLM',
+                                'No_GLM+IS' = 'GLM+IS',
+                                'No_NNet' = 'NNet',
+                                'No_NNet+IS' = 'NNet+IS',
+                                'Yes_Naive' = 'Naive',
+                                'Yes_CBPS' = 'CBPS',
+                                'Yes_GLM' = 'GLM',
+                                'Yes_GLM+IS' = 'GLM+IS',
+                                'Yes_NNet' = 'NNet',
+                                'Yes_NNet+IS' = 'NNet+IS')) +
+    theme(
+      axis.text.x = element_text(angle = 60, hjust = 1, size = 14),
+      axis.text.y = element_text(size = 14),
+      title = element_text(size = 14),
+      legend.text = element_text(size = 14),
+      legend.title = element_text(size = 14),
+      legend.position = "bottom",
+      legend.spacing.x = unit(0.5, 'cm')
+    ) +
+    facet_wrap(~n)
+}), nrow = 2)
+
+out 
+# ggsave("./figures/output_plot4.pdf", out, width = 14, height = 15, units = "in", dpi = 500)
+# ggsave("./figures/output_plot4.pdf", out, width = 14, height = 10, units = "in", dpi = 500)
+# ggsave("./figures/output_plot.pdf", out, width = 10, height = 7, units = "in", dpi = 500)
+```
+
+
+```{r, fig.width=20, fig.height=15}
+# custom_colors <- c("#F7F7F7", "#FFC0CB", "#FDDBC7", "#D6604D", "#D1E5F0",  "#4393C3")
+
+custom_colors <- c("#FDDBC7", "#D6604D", "#D1E5F0",  "#4393C3", "#F7F7F7")
+
+ate_plot3 = ate_plot_all %>% 
+  separate(Estimator, into = c("Estimator", "Scenario"), sep = "-") %>% 
+  mutate(Estimator = case_when(
+    Scenario == ' both incorrect' | Scenario == ' PS correct,\noutcome incorrect' ~ 'DR \n outcome misspecified',
+    Scenario == ' PS incorrect,\noutcome correct'| Scenario == ' both correct' ~ 'DR \n outcome correctly specified',
+    TRUE ~ Estimator
+  )) %>% 
+  mutate(Scenario = case_when(
+    Scenario == ' both incorrect' | Scenario == ' PS incorrect,\noutcome correct' ~ ' PS incorrect',
+    Scenario == ' both correct' | Scenario == ' PS correct,\noutcome incorrect' ~ ' PS correct',
+    TRUE ~ Scenario
+  ))
+
+quantiles_by_estimator <- with(ate_plot3, tapply(Estimation, Estimator, quantile, c(0.001, 0.999)))
+
+DR_df1 = ate_plot3 %>% filter(Estimator == "DR \n outcome correctly specified") %>% 
+  filter(Estimation > quantiles_by_estimator$`DR 
+ outcome correctly specified`[1] & Estimation < quantiles_by_estimator$`DR 
+ outcome correctly specified`[2])
+
+DR_df2 = ate_plot3 %>% filter(Estimator == "DR \n outcome misspecified") %>% 
+  filter(Estimation > quantiles_by_estimator$`DR 
+ outcome misspecified`[1] & Estimation < quantiles_by_estimator$`DR 
+ outcome misspecified`[2])
+
+HT_df = ate_plot3 %>% filter(Estimator == 'HT ') %>% filter(Estimation > quantiles_by_estimator$`HT `[1] & Estimation < quantiles_by_estimator$`HT `[2])
+Hajek_df = ate_plot3 %>% filter(Estimator == 'Hajek ') %>% filter(Estimation > quantiles_by_estimator$`Hajek `[1] & Estimation < quantiles_by_estimator$`Hajek `[2])
+
+ate_plot4 = rbind(HT_df, Hajek_df, DR_df1, DR_df2) %>% 
+  mutate(Estimator = factor(Estimator,
+                            labels = c('HT ','Hájek ', 'DR \n outcome misspecified', 'DR \n outcome correctly specified'),
+                            levels = c('HT ','Hajek ', 'DR \n outcome misspecified', 'DR \n outcome correctly specified'))) %>% 
+  mutate(Scenario = case_when(
+    Scenario == ' PS incorrect' ~ 'PS misspecified',
+    Scenario == ' PS correct' ~ 'PS correctly specified'
+  ))
+
+ate_plot4 = ate_plot4 %>% filter(Methods != 'Naive')
+
+plot =
+ggplot(data = ate_plot4) +
+  geom_boxplot(aes(x = Scenario, y = Estimation, fill = Methods)) +
+  geom_hline(yintercept = true_ate, color = 'red') +
+  theme_bw() +
+  scale_fill_manual(values = custom_colors) +
+  theme(
+    axis.text.x = element_text(size = 16),
+    axis.text.y = element_text(size = 16),
+    title = element_text(size = 16),
+    legend.text = element_text(size = 16),
+    legend.title = element_text(size = 16),
+    legend.position = "bottom",
+    legend.spacing.x = unit(0.5, 'cm'),
+    strip.text = element_text(size = 16)) + 
+  facet_grid(Estimator~n, scales = 'free_y')
+  # facet_wrap(Estimator~n, scales = 'free_y', ncol = 4)
+plot
+# ggsave("./figures/output_plot6.pdf", plot, width = 12, height = 15, units = "in", dpi = 500)
+```
+
+```{r}
+# test1 = ate_plot_all %>% filter(Methods == 'CBPS' & Estimator == 'HT - PS incorrect')
+# test2 = ate_plot_all %>% filter(Methods == 'CBPS' & Estimator == 'Hajek - PS incorrect')
+# boxplot(test1$Estimation)
+# boxplot(test2$Estimation)
+```
+
+
+
+```{r}
+location_out1 = '/storage/work/yqs5519/TuneCalibratedLoss/sim_results5'
+
+balance = read_rds(paste(location_out1, '/balance_df.rds', sep = ''))
+balance[[1]]
+
+GLM_IS = data.frame(matrix(NA, nrow=1000, ncol=4))
+GLM = data.frame(matrix(NA, nrow=1000, ncol=4))
+CBPS = data.frame(matrix(NA, nrow=1000, ncol=4))
+NNet = data.frame(matrix(NA, nrow=1000, ncol=4))
+NNet_IS = data.frame(matrix(NA, nrow=1000, ncol=4))
+for (i in 1:1000) {
+
+  GLM_IS[i,] = balance[[i]][,3]
+
+  #GLM
+  GLM[i,] = balance[[i]][,2]
+
+  #CBPS
+  CBPS[i,] = balance[[i]][,6]
+
+  #NNet
+  NNet[i,] = balance[[i]][,4]
+
+  #NNet_IS
+  NNet_IS[i,] = balance[[i]][,5]
+}
+
+NNet_IS = NNet_IS %>% na.omit
+NNet = NNet %>% na.omit
+CBPS = CBPS %>% na.omit
+GLM = GLM %>% na.omit
+GLM_IS = GLM_IS %>% na.omit
+
+all = rbind(CBPS, GLM, GLM_IS, NNet, NNet_IS) %>%
+  as.data.frame() %>%
+  mutate(Methods = c(rep('CBPS', nrow(CBPS)), rep('GLM', nrow(GLM)),
+                    rep('GLM_IS', nrow(GLM_IS)), rep('NNet', nrow(NNet)), rep('NNet_IS', nrow(NNet_IS))))
+
+plot_df1 = all %>% pivot_longer(
+  1:4,
+  names_to = 'Variables',
+  values_to = 'standardized mean difference'
+) %>% mutate(Methods = factor(Methods, levels = c('Naive', 'CBPS', 'GLM', 'GLM_IS', 'NNet', 'NNet_IS'))) %>%
+  mutate(n ='n = 200')
+
+custom_labels <- c(expression(X[1]^"*"), expression(X[2]^"*"), expression(X[3]^"*"), expression(X[4]^"*"))
+```
+
+
+```{r}
+out =
+ggplot(data = plot_df) + geom_boxplot(aes(x = Methods, y = `standardized mean difference`, fill = Variables), outlier.size=0.5) +
+  scale_fill_brewer(labels = custom_labels) +
+  # ggtitle('Covariate Balance (PS model misspecified)') +
+  theme_bw() + ylim(-10,10) +
+  theme(axis.text.x = element_text(size = 16),  # Adjust font size for x-axis labels
+        axis.text.y = element_text(size = 16),  # Adjust font size for y-axis labels
+        title = element_text(size = 16),        # Adjust font size for title
+        legend.text = element_text(size = 12),  # Adjust font size for legend text
+        legend.title = element_text(size = 12), # Adjust font size for legend title
+        legend.position = c(0.99, 0.99),       # Adjust the legend position (values range from 0 to 1)
+        legend.justification = c("right", "top")) # Adjust the justification of the legend
+
+out
+# ggsave("./figures/balance_plot(mis).pdf", out, width = 6, height = 4, units = "in", dpi = 500)
+```
+
