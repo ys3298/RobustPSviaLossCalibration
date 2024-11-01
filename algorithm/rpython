@@ -1,0 +1,2 @@
+source /storage/home/yqs5519/miniconda3/bin/activate test_sym2
+python /storage/work/yqs5519/TuneCalibratedLoss/algorithm/main2.py $1 $2 $3 $4
